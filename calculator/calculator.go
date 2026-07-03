@@ -10,9 +10,7 @@ import (
 	"unicode"
 )
 
-// ─────────────────────────────────────────────
 //  TOKENIZER
-// ─────────────────────────────────────────────
 
 type TokenType string
 
@@ -85,13 +83,11 @@ func tokenize(input string) ([]Token, error) {
 	return tokens, nil
 }
 
-// ─────────────────────────────────────────────
 //  PARSER  (recursive descent — BODMAS order)
 //  expression → term ((+ | -) term)*
 //  term       → unary ((* | / | %) unary)*
 //  unary      → - primary | primary
 //  primary    → NUMBER | ( expression )
-// ─────────────────────────────────────────────
 
 type Parser struct {
 	tokens []Token
@@ -183,9 +179,7 @@ func (p *Parser) primary() (float64, error) {
 	return 0, fmt.Errorf("unexpected token: %q", tok.Value)
 }
 
-// ─────────────────────────────────────────────
 //  EVALUATE
-// ─────────────────────────────────────────────
 
 func evaluate(input string) (float64, error) {
 	input = strings.TrimSpace(input)
@@ -207,9 +201,7 @@ func evaluate(input string) (float64, error) {
 	return result, nil
 }
 
-// ─────────────────────────────────────────────
 //  FORMAT — strips trailing zeros
-// ─────────────────────────────────────────────
 
 func format(f float64) string {
 	if f == math.Trunc(f) && !math.IsInf(f, 0) {
@@ -221,30 +213,10 @@ func format(f float64) string {
 	return s
 }
 
-// ─────────────────────────────────────────────
 //  MAIN
-// ─────────────────────────────────────────────
 
 func main() {
 	reader := bufio.NewReader(os.Stdin)
-
-	// fmt.Println("┌────────────────────────────────────┐")
-	// fmt.Println("│         Go CLI Calculator          │")
-	// fmt.Println("├────────────────────────────────────┤")
-	// fmt.Println("│  Operators : + - * / % ( )         │")
-	// fmt.Println("│                                    │")
-	// fmt.Println("│  Examples:                         │")
-	// fmt.Println("│   3 + 4 * 2         → 11           │")
-	// fmt.Println("│   (3 + 4) * 2       → 14           │")
-	// fmt.Println("│   10 / 4            → 2.5          │")
-	// fmt.Println("│   10 % 3            → 1            │")
-	// fmt.Println("│   -5 * (2 + 3)      → -25          │")
-	// fmt.Println("│   1+2+3+4+5         → 15           │")
-	// fmt.Println("│   (2+3) * (4-1) / 3 → 5            │")
-	// fmt.Println("│   ans + 10  (reuse last result)    │")
-	// fmt.Println("│                                    │")
-	// fmt.Println("│  Type 'exit' to quit               │")
-	// fmt.Println("└────────────────────────────────────┘")
 
 	var lastResult float64
 	hasLast := false
