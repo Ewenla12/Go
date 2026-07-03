@@ -10,7 +10,7 @@ import (
 	"unicode"
 )
 
-//  TOKENIZER
+//  TOKEN
 
 type TokenType string
 
@@ -83,11 +83,7 @@ func tokenize(input string) ([]Token, error) {
 	return tokens, nil
 }
 
-//  PARSER  (recursive descent — BODMAS order)
-//  expression → term ((+ | -) term)*
-//  term       → unary ((* | / | %) unary)*
-//  unary      → - primary | primary
-//  primary    → NUMBER | ( expression )
+//  PARSER  for enforcing bodmas
 
 type Parser struct {
 	tokens []Token
@@ -179,7 +175,7 @@ func (p *Parser) primary() (float64, error) {
 	return 0, fmt.Errorf("unexpected token: %q", tok.Value)
 }
 
-//  EVALUATE
+//  EVALUATE connects the token and parser together and gives back the final answer.
 
 func evaluate(input string) (float64, error) {
 	input = strings.TrimSpace(input)
