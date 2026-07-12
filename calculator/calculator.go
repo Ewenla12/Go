@@ -1,261 +1,239 @@
 package main
 
-import (
-	"bufio"
-	"fmt"
-	"math"
-	"os"
-	"strconv"
-	"strings"
-	"unicode"
-)
+import "fmt"
 
-//  TOKEN
+// didn't work cause of float typecasting and i had to use only the asteric button for multiplication and not the x button
+// func main() {
+// 	var num1, num2 float64
+// 	var operator string
 
-type TokenType string
+// 	fmt.Println(" Calculator ")
 
-const (
-	NUMBER TokenType = "NUMBER"
-	PLUS   TokenType = "+"
-	MINUS  TokenType = "-"
-	MUL    TokenType = "*"
-	DIV    TokenType = "/"
-	MOD    TokenType = "%"
-	LPAREN TokenType = "("
-	RPAREN TokenType = ")"
-	EOF    TokenType = "EOF"
-)
+// 	// for  first number
+// 	fmt.Print("Enter first number: ")
+// 	fmt.Scan(&num1)
 
-type Token struct {
-	Type  TokenType
-	Value string
-}
+// 	//  operator
+// 	fmt.Print("Enter operator (+, -, *, /, %): ")
+// 	fmt.Scan(&operator)
 
-func tokenize(input string) ([]Token, error) {
-	var tokens []Token
-	i := 0
-	runes := []rune(input)
+// 	// for second number
+// 	fmt.Print("Enter second number: ")
+// 	fmt.Scan(&num2)
 
-	for i < len(runes) {
-		ch := runes[i]
+// 	//  calculate
+// 	switch operator {
 
-		if unicode.IsSpace(ch) {
-			i++
-			continue
-		}
+// 	case "+":
+// 		fmt.Printf("%.2f + %.2f = %.2f\n", num1, num2, num1+num2)
 
-		if unicode.IsDigit(ch) || (ch == '.' && i+1 < len(runes) && unicode.IsDigit(runes[i+1])) {
-			j := i
-			hasDot := false
-			for j < len(runes) && (unicode.IsDigit(runes[j]) || (runes[j] == '.' && !hasDot)) {
-				if runes[j] == '.' {
-					hasDot = true
-				}
-				j++
-			}
-			tokens = append(tokens, Token{NUMBER, string(runes[i:j])})
-			i = j
-			continue
-		}
+// 	case "-":
+// 		fmt.Printf("%.2f - %.2f = %.2f\n", num1, num2, num1-num2)
 
-		switch ch {
-		case '+':
-			tokens = append(tokens, Token{PLUS, "+"})
-		case '-':
-			tokens = append(tokens, Token{MINUS, "-"})
-		case '*', 'x', 'X':
-			tokens = append(tokens, Token{MUL, "*"})
-		case '/':
-			tokens = append(tokens, Token{DIV, "/"})
-		case '%':
-			tokens = append(tokens, Token{MOD, "%"})
-		case '(':
-			tokens = append(tokens, Token{LPAREN, "("})
-		case ')':
-			tokens = append(tokens, Token{RPAREN, ")"})
-		default:
-			return nil, fmt.Errorf("unknown character: %q", ch)
-		}
-		i++
-	}
+// 	case "*":
+// 		fmt.Printf("%.2f * %.2f = %.2f\n", num1, num2, num1*num2)
 
-	tokens = append(tokens, Token{EOF, ""})
-	return tokens, nil
-}
+// 	case "/":
+// 		if num2 == 0 {
+// 			fmt.Println("Error: Cannot divide by zero!")
+// 		} else {
+// 			fmt.Printf("%.2f / %.2f = %.2f\n", num1, num2, num1/num2)
+// 		}
 
-//  PARSER  for enforcing bodmas
+// 	case "%":
+// 		// Modulus only works with integers
+// 		fmt.Println("Modulus (%) only works with integers.")
 
-type Parser struct {
-	tokens []Token
-	pos    int
-}
+// 	default:
+// 		fmt.Println("Invalid operator!")
+// 	}
+// }
 
-func (p *Parser) peek() Token    { return p.tokens[p.pos] }
-func (p *Parser) consume() Token { t := p.tokens[p.pos]; p.pos++; return t }
+// tottally forgot to and the percenatge cayse i was debating if it was really needed
+// func main() {
+// 	var num1, num2 float64
+// 	var operator string
 
-func (p *Parser) expression() (float64, error) {
-	left, err := p.term()
-	if err != nil {
-		return 0, err
-	}
-	for p.peek().Type == PLUS || p.peek().Type == MINUS {
-		op := p.consume()
-		right, err := p.term()
-		if err != nil {
-			return 0, err
-		}
-		if op.Type == PLUS {
-			left += right
-		} else {
-			left -= right
-		}
-	}
-	return left, nil
-}
+// 	fmt.Println(" Go Calculator ")
 
-func (p *Parser) term() (float64, error) {
-	left, err := p.unary()
-	if err != nil {
-		return 0, err
-	}
-	for p.peek().Type == MUL || p.peek().Type == DIV || p.peek().Type == MOD {
-		op := p.consume()
-		right, err := p.unary()
-		if err != nil {
-			return 0, err
-		}
-		switch op.Type {
-		case MUL:
-			left *= right
-		case DIV:
-			if right == 0 {
-				return 0, fmt.Errorf("division by zero")
-			}
-			left /= right
-		case MOD:
-			if right == 0 {
-				return 0, fmt.Errorf("modulo by zero")
-			}
-			left = math.Mod(left, right)
-		}
-	}
-	return left, nil
-}
+// 	// Get first number
+// 	fmt.Print("Enter first number: ")
+// 	fmt.Scan(&num1)
 
-func (p *Parser) unary() (float64, error) {
-	if p.peek().Type == MINUS {
-		p.consume()
-		val, err := p.primary()
-		if err != nil {
-			return 0, err
-		}
-		return -val, nil
-	}
-	return p.primary()
-}
+// 	// Get operator
+// 	fmt.Print("Enter operator (+, -, *, /): ")
+// 	fmt.Scan(&operator)
 
-func (p *Parser) primary() (float64, error) {
-	tok := p.peek()
-	if tok.Type == NUMBER {
-		p.consume()
-		return strconv.ParseFloat(tok.Value, 64)
-	}
-	if tok.Type == LPAREN {
-		p.consume()
-		val, err := p.expression()
-		if err != nil {
-			return 0, err
-		}
-		if p.peek().Type != RPAREN {
-			return 0, fmt.Errorf("missing closing )")
-		}
-		p.consume()
-		return val, nil
-	}
-	return 0, fmt.Errorf("unexpected token: %q", tok.Value)
-}
+// 	// Get second number
+// 	fmt.Print("Enter second number: ")
+// 	fmt.Scan(&num2)
 
-//  EVALUATE connects the token and parser together and gives back the final answer.
+// 	// Perform calculation
+// 	switch operator {
+// 	case "+":
+// 		fmt.Printf("%.2f + %.2f = %.2f\n", num1, num2, num1+num2)
 
-func evaluate(input string) (float64, error) {
-	input = strings.TrimSpace(input)
-	if input == "" {
-		return 0, fmt.Errorf("empty expression")
-	}
-	tokens, err := tokenize(input)
-	if err != nil {
-		return 0, err
-	}
-	parser := &Parser{tokens: tokens}
-	result, err := parser.expression()
-	if err != nil {
-		return 0, err
-	}
-	if parser.peek().Type != EOF {
-		return 0, fmt.Errorf("unexpected token: %q", parser.peek().Value)
-	}
-	return result, nil
-}
+// 	case "-":
+// 		fmt.Printf("%.2f - %.2f = %.2f\n", num1, num2, num1-num2)
 
-//  FORMAT — strips trailing zeros
+// 	case "*":
+// 		fmt.Printf("%.2f * %.2f = %.2f\n", num1, num2, num1*num2)
 
-func format(f float64) string {
-	if f == math.Trunc(f) && !math.IsInf(f, 0) {
-		return fmt.Sprintf("%.0f", f)
-	}
-	s := strconv.FormatFloat(f, 'f', 10, 64)
-	s = strings.TrimRight(s, "0")
-	s = strings.TrimRight(s, ".")
-	return s
-}
+// 	case "/":
+// 		if num2 == 0 {
+// 			fmt.Println("Error: Cannot divide by zero.")
+// 		} else {
+// 			fmt.Printf("%.2f / %.2f = %.2f\n", num1, num2, num1/num2)
+// 		}
 
-//  MAIN
+// 	default:
+// 		fmt.Println("Invalid operator.")
+// 	}
+// }
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
+	var choice string
 
-	var lastResult float64
-	hasLast := false
+	fmt.Println("go calculator")
 
 	for {
-		fmt.Print("\n> ")
-		line, err := reader.ReadString('\n')
-		if err != nil {
-			fmt.Println("Error:", err)
-			continue
-		}
-		line = strings.TrimSpace(line)
+		var num1, num2 float64
+		var operator string
+		var result float64
 
-		if line == "" {
-			continue
+		fmt.Print("\nEnter first number: ")
+		fmt.Scan(&num1)
+
+		fmt.Print("Enter operator (+, -, *, x, X, /, %): ")
+		fmt.Scan(&operator)
+
+		fmt.Print("Enter second number: ")
+		fmt.Scan(&num2)
+
+		switch operator {
+		case "+":
+			result = num1 + num2
+			fmt.Printf("Result: %.2f\n", result)
+
+		case "-":
+			result = num1 - num2
+			fmt.Printf("Result: %.2f\n", result)
+
+		case "*", "x", "X":
+			result = num1 * num2
+			fmt.Printf("Result: %.2f\n", result)
+
+		case "/":
+			if num2 == 0 {
+				fmt.Println("Error: Cannot divide by zero.")
+			} else {
+				result = num1 / num2
+				fmt.Printf("Result: %.2f\n", result)
+			}
+
+		case "%":
+			result = (num1 / 100) * num2
+			fmt.Printf("%.2f%% of %.2f = %.2f\n", num1, num2, result)
+
+		default:
+			fmt.Println("Invalid operator!")
 		}
-		if line == "exit" || line == "quit" {
-			fmt.Println("Goodbye!")
+
+		fmt.Print("\nDo another calculation? (y/n): ")
+		fmt.Scan(&choice)
+
+		if choice == "n" || choice == "N" {
+			fmt.Println("bye!!!!!!!!!!!!!!!!!!!!!!!")
 			break
 		}
-
-		// if line starts with an operator, prepend ans automatically
-		// e.g. *100 becomes ans*100
-		if hasLast && len(line) > 0 {
-			first := rune(line[0])
-			if first == '+' || first == '-' || first == '*' || first == '/' || first == '%' {
-				line = "ans" + line
-			}
-		}
-
-		// "ans" lets you chain the last result into the next expression
-		if hasLast {
-			line = strings.ReplaceAll(line, "ans", format(lastResult))
-		}
-
-		result, err := evaluate(line)
-		if err != nil {
-			fmt.Println("  Error:", err)
-			continue
-		}
-
-		lastResult = result
-		hasLast = true
-		fmt.Println("  =", format(result))
 	}
 }
+
+// got the percentage to work and added a loop till user decides to.............
+// and i fogort to add it so that a normal x can do multiplication instead of starting all over i just added it
+
+// tried to use strust here cause it accpect all data types
+//  struct method
+// type Calculator struct {
+// 	Num1 float64
+// 	Num2 float64
+// }
+
+// // Methods
+// func (c Calculator) Add() float64 {
+// 	return c.Num1 + c.Num2
+// }
+
+// func (c Calculator) Subtract() float64 {
+// 	return c.Num1 - c.Num2
+// }
+
+// func (c Calculator) Multiply() float64 {
+// 	return c.Num1 * c.Num2
+// }
+
+// func (c Calculator) Divide() (float64, error) {
+// 	if c.Num2 == 0 {
+// 		return 0, fmt.Errorf("cannot divide by zero")
+// 	}
+// 	return c.Num1 / c.Num2, nil
+// }
+
+// func (c Calculator) Percentage() float64 {
+// 	return (c.Num1 / 100) * c.Num2
+// }
+
+// func main() {
+// 	var calc Calculator
+// 	var operator string
+// 	var choice string
+
+// 	fmt.Println("Struct calculator`")
+
+// 	for {
+// 		fmt.Print("\nEnter first number:")
+// 		fmt.Scan(&calc.Num1)
+
+// 		fmt.Print("Enter operator (+, -, *, x, X, /, %): ")
+// 		fmt.Scan(&operator)
+
+// 		fmt.Print("Enter second number:")
+// 		fmt.Scan(&calc.Num2)
+
+// 		switch operator {
+
+// 		case "+":
+// 			fmt.Printf("Result = %.2f\n", calc.Add())
+
+// 		case "-":
+// 			fmt.Printf("Result = %.2f\n", calc.Subtract())
+
+// 		case "*", "x", "X":
+// 			fmt.Printf("Result = %.2f\n", calc.Multiply())
+
+// 		case "/":
+// 			result, err := calc.Divide()
+// 			if err != nil {
+// 				fmt.Println(err)
+// 			} else {
+// 				fmt.Printf("Result = %.2f\n", result)
+// 			}
+
+// 		case "%":
+// 			fmt.Printf("%.2f%% of %.2f = %.2f\n",
+// 				calc.Num1, calc.Num2, calc.Percentage())
+
+// 		default:
+// 			fmt.Println("Invalid operator")
+// 		}
+
+// 		fmt.Print("\nContinue? (y/n): ")
+// 		fmt.Scan(&choice)
+
+// 		if choice == "n" || choice == "N" {
+// 			fmt.Println("bye!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+// 			break
+// 		}
+// 	}
+// }
+// patched up untill it worked
