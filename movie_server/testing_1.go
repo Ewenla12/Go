@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
+	// "github.com/gofiber/fiber/v3/middleware/static"
 )
 
 type Movie struct {
@@ -74,10 +75,13 @@ var movies = []Movie{
 func main() {
 	app := fiber.New()
 
+	// connect frontend
+	// app.Use("/", static.New("./public"))
+
 	// all movies
 	app.Get("/movies", getAllMovies)
 
-	// movie by id
+	// search by id
 	app.Get("/movies/:id", getMovieByID)
 
 	// search by title
@@ -89,10 +93,10 @@ func main() {
 	// filter by genre
 	app.Get("/genre", filterByGenre)
 
-	// filter by rating
+	// search by rating
 	app.Get("/rating", filterByRating)
 
-	// top 10 highest rated
+	// top 10 rated
 	app.Get("/top", getTopMovies)
 
 	app.Listen(":8000")
@@ -105,7 +109,7 @@ func getAllMovies(c fiber.Ctx) error {
 	return c.JSON(movies)
 }
 
-// show one movie by id
+// search movie by id
 func getMovieByID(c fiber.Ctx) error {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil {
@@ -123,7 +127,7 @@ func getMovieByID(c fiber.Ctx) error {
 	})
 }
 
-// search movies by title
+// search movie by title
 func searchByTitle(c fiber.Ctx) error {
 	query := strings.ToLower(c.Query("title"))
 	if query == "" {
@@ -170,7 +174,7 @@ func searchByActor(c fiber.Ctx) error {
 	return c.JSON(results)
 }
 
-// filter by genre
+// search by genre
 func filterByGenre(c fiber.Ctx) error {
 	query := strings.ToLower(c.Query("name"))
 	if query == "" {
@@ -220,7 +224,7 @@ func filterByRating(c fiber.Ctx) error {
 	return c.JSON(results)
 }
 
-// show top 10 highest rated movies
+// show top 10 rated movies
 func getTopMovies(c fiber.Ctx) error {
 	sorted := make([]Movie, len(movies))
 	copy(sorted, movies)

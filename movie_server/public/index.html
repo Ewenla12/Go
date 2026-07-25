@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Movie Server</title>
+  <style>
+    :root {
+      --bg: #140f15;
+      --card: #48085a;
+      --accent: #000fe6;
+      --text: #eef0f3;
+      --muted: #420806;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    header {
+      padding: 28px 32px 18px;
+      text-align: center;
+    }
+
+    header h1 {
+      margin: 0 0 16px;
+      font-size: 1.9rem;
+      letter-spacing: 0.5px;
+    }
+
+    .search-bar {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .search-bar input {
+      width: 320px;
+      max-width: 70vw;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid #643b3b;
+      background: #516086;
+      color: var(--text);
+      font-size: 0.95rem;
+    }
+
+    .search-bar input:focus {
+      outline: 2px solid var(--accent);
+    }
+
+    .search-bar button {
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #1a1a1a;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .search-bar button:hover {
+      opacity: 0.9;
+    }
+
+    .search-bar button.secondary {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid #fd4f4f;
+    }
+
+    #status {
+      text-align: center;
+      color: var(--muted);
+      margin: 10px 0 0;
+      min-height: 1.2em;
+      font-size: 0.9rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 20px;
+      padding: 24px 32px 48px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.15s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+    }
+
+    .card img {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      display: block;
+      background: #03102e;
+    }
+
+    .card-body {
+      padding: 12px 14px 16px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .card-body h3 {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.25;
+    }
+
+    .meta {
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .rating {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: rgba(163, 138, 40, 0.15);
+      color: var(--accent);
+      font-weight: 600;
+      font-size: 0.82rem;
+      width: fit-content;
+    }
+
+    .actors {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>🎬 Movie Server</h1>
+    <div class="search-bar">
+      <input id="searchInput" type="text" placeholder="Search by title...">
+      <button id="searchBtn">Search</button>
+      <button id="resetBtn" class="secondary"> X </button>
+    </div>
+    <p id="status"></p>
+  </header>
+
+  <div class="grid" id="grid"></div>
+
+  <script>
+    const grid = document.getElementById('grid');
+    const status = document.getElementById('status');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function posterUrl(title) {
+      // Placeholder picture since the movie has no image.
+      const label = encodeURIComponent(title);
+      return `https://placehold.co/300x445/1a1c22/e6b800?text=${label}&font=roboto`;
+    }
+
+    function render(movies) {
+      grid.innerHTML = '';
+      if (!movies || movies.length === 0) {
+        status.textContent = 'No movies found.';
+        return;
+      }
+      status.textContent = `${movies.length} movie${movies.length === 1 ? '' : 's'}`;
+      movies.forEach(m => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+        <img src="${posterUrl(m.title)}" alt="${m.title} poster" loading="lazy">
+        <div class="card-body">
+          <h3>${m.title}</h3>
+          <div class="meta">${m.year} · ${m.genre}</div>
+          <span class="rating">★ ${m.rating}</span>
+          <div class="actors">${(m.actors || []).join(', ')}</div>
+        </div>
+      `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function loadAll() {
+      status.textContent = 'Loading...';
+      try {
+        const res = await fetch('/movies');
+        const data = await res.json();
+        render(data);
+      } catch (e) {
+        status.textContent = 'Failed to load movies.';
+      }
+    }
+
+    async function search() {
+      const q = searchInput.value.trim();
+      if (!q) { loadAll(); return; }
+      status.textContent = 'Searching...';
+      try {
+        const res = await fetch(`/search?title=${encodeURIComponent(q)}`);
+        if (res.status === 404) { render([]); return; }
+        const data = await res.json();
+        render(data);
+      } catch (e) {
+        status.textContent = 'Search failed.';
+      }
+    }
+
+    searchBtn.addEventListener('click', search);
+    resetBtn.addEventListener('click', () => { searchInput.value = ''; loadAll(); });
+    searchInput.addEventListener('keydown', e => { if (e.key === 'Enter') search(); });
+
+    loadAll();
+  </script>
+
+</body>
+
+</html>
