@@ -6,11 +6,12 @@
   <title>Movie Server</title>
   <style>
     :root {
-      --bg: #140f15;
-      --card: #48085a;
-      --accent: #000fe6;
-      --text: #eef0f3;
-      --muted: #420806;
+      --bg: #14101c;
+      --card: #2f1b42;
+      --accent: #f2b705;
+      --text: #f3eef7;
+      --muted: #a89bc2;
+      --danger: #e63946;
     }
 
     * {
@@ -47,8 +48,8 @@
       max-width: 70vw;
       padding: 10px 14px;
       border-radius: 8px;
-      border: 1px solid #643b3b;
-      background: #516086;
+      border: 1px solid #4a3466;
+      background: #1e1430;
       color: var(--text);
       font-size: 0.95rem;
     }
@@ -85,6 +86,63 @@
       font-size: 0.9rem;
     }
 
+    .add-panel {
+      max-width: 640px;
+      margin: 20px auto 0;
+      padding: 18px 20px;
+      background: var(--card);
+      border-radius: 10px;
+    }
+
+    .add-panel summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .add-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .add-form input {
+      padding: 9px 12px;
+      border-radius: 8px;
+      border: 1px solid #4a3466;
+      background: #1e1420;
+      color: var(--text);
+      font-size: 0.9rem;
+      width: 100%;
+    }
+
+    .add-form input.full {
+      grid-column: 1 / -1;
+    }
+
+    .add-form button {
+      grid-column: 1 / -1;
+      padding: 10px 18px;
+      border-radius: 8px;
+      border: none;
+      background: var(--accent);
+      color: #1a1a1a;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .add-form button:hover {
+      opacity: 0.9;
+    }
+
+    #addStatus {
+      grid-column: 1 / -1;
+      font-size: 0.85rem;
+      color: var(--muted);
+      min-height: 1.1em;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -99,6 +157,7 @@
       display: flex;
       flex-direction: column;
       transition: transform 0.15s ease;
+      position: relative;
     }
 
     .card:hover {
@@ -111,6 +170,28 @@
       object-fit: cover;
       display: block;
       background: #03102e;
+    }
+
+    .delete-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(230, 57, 70, 0.9);
+      color: #fff;
+      font-size: 0.95rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .delete-btn:hover {
+      background: var(--danger);
     }
 
     .card-body {
@@ -162,6 +243,19 @@
       <button id="resetBtn" class="secondary"> X </button>
     </div>
     <p id="status"></p>
+
+    <details class="add-panel">
+      <summary>+ Add a movie</summary>
+      <form class="add-form" id="addForm">
+        <input type="text" id="f_title" placeholder="Title" required>
+        <input type="number" id="f_year" placeholder="Year" required>
+        <input type="number" id="f_rating" placeholder="Rating (e.g. 8.2)" step="0.1" min="0" max="10" required>
+        <input type="text" id="f_genre" placeholder="Genre" required>
+        <input type="text" id="f_actors" class="full" placeholder="Actors, comma separated">
+        <button type="submit">Add movie</button>
+        <div id="addStatus"></div>
+      </form>
+    </details>
   </header>
 
   <div class="grid" id="grid"></div>
@@ -172,9 +266,11 @@
     const searchInput = document.getElementById('searchInput');
     const searchBtn = document.getElementById('searchBtn');
     const resetBtn = document.getElementById('resetBtn');
+    const addForm = document.getElementById('addForm');
+    const addStatus = document.getElementById('addStatus');
 
     function posterUrl(title) {
-      // Placeholder picture since the movie has no image.
+      // Placeholder for picture since the movie has no image.
       const label = encodeURIComponent(title);
       return `https://placehold.co/300x445/1a1c22/e6b800?text=${label}&font=roboto`;
     }
@@ -190,6 +286,7 @@
         const card = document.createElement('div');
         card.className = 'card';
         card.innerHTML = `
+        <button class="delete-btn" data-id="${m.id}" title="Delete">&times;</button>
         <img src="${posterUrl(m.title)}" alt="${m.title} poster" loading="lazy">
         <div class="card-body">
           <h3>${m.title}</h3>
@@ -226,6 +323,60 @@
         status.textContent = 'Search failed.';
       }
     }
+
+    // handle delete button clicks (event delegation, since cards are
+    // re-rendered dynamically)
+    grid.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.delete-btn');
+      if (!btn) return;
+
+      const id = btn.dataset.id;
+      if (!confirm('Delete this movie?')) return;
+
+      try {
+        const res = await fetch(`/movies/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('delete failed');
+        // remove card without reloading
+        btn.closest('.card').remove();
+        status.textContent = 'Movie deleted.';
+      } catch (err) {
+        status.textContent = 'Failed to delete movie.';
+      }
+    });
+
+    // handle add-movie form submit
+    addForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      addStatus.textContent = 'Saving...';
+
+      const payload = {
+        title: document.getElementById('f_title').value.trim(),
+        year: parseInt(document.getElementById('f_year').value, 10),
+        rating: parseFloat(document.getElementById('f_rating').value),
+        genre: document.getElementById('f_genre').value.trim(),
+        actors: document.getElementById('f_actors').value
+          .split(',')
+          .map(a => a.trim())
+          .filter(a => a.length > 0),
+      };
+
+      try {
+        const res = await fetch('/movies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'failed to add movie');
+        }
+        addForm.reset();
+        addStatus.textContent = 'Movie added.';
+        loadAll();
+      } catch (err) {
+        addStatus.textContent = err.message;
+      }
+    });
 
     searchBtn.addEventListener('click', search);
     resetBtn.addEventListener('click', () => { searchInput.value = ''; loadAll(); });
